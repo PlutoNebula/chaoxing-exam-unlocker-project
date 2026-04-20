@@ -1,0 +1,32 @@
+# 系统文件
+*.log
+*.tmp
+*.temp
+Thumbs.db
+.DS_Store
+
+# 编辑器文件
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# 二进制文件
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 崩溃报告文件（根据当前目录中的文件）
+CrashReport.txt
+EngineReport.txt
+MiniDump.dmp
+DxDiag.txt
+systeminfo.nfo
+event.evtx
+http_raw.txt
+ContactId.txt
+
+# 配置文件（如果包含敏感信息）
+# config.ini
