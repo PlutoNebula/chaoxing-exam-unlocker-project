@@ -1,9 +1,11 @@
-# 系统文件
+# 系统和临时文件
 *.log
 *.tmp
 *.temp
 Thumbs.db
 .DS_Store
+desktop.ini
+$RECYCLE.BIN/
 
 # 编辑器文件
 *.swp
@@ -11,6 +13,8 @@ Thumbs.db
 *~
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 
 # 二进制文件
 *.exe
