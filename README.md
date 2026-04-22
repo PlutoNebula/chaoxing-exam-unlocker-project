@@ -108,6 +108,85 @@ document.querySelectorAll('.maskDiv, .mask-no-bg, #worktoast').forEach(mask => m
 document.body.style.pointerEvents = "auto";
 ```
 
+## 第五步：终极突破——iframe 内核级粘贴劫持
+
+在完成了原型链劫持之后，理论上所有 beforepaste 拦截已经失效。然而在实际测试中，仍然存在“无法粘贴”的情况。经过进一步分析，问题的根源逐渐显现：
+
+UEditor 的实际输入环境并不在主页面，而是在独立的 iframe 内部。
+
+这意味着之前对 DOM 或 UEditor 实例的拦截，只能覆盖主文档层面的事件，而 iframe 内部仍然保持原始粘贴拦截逻辑。
+
+iframe 内核阻止的分析
+
+在 V6.3 版本中，超星平台通过以下方式阻止粘贴：
+
+iframe 内部绑定 paste、beforepaste 事件，捕获剪贴板数据。
+对剪贴板内容进行清洗或直接阻止插入。
+即便外层 DOM 或 UEditor 原型被劫持，iframe 内的事件依然生效。
+
+这也是为什么之前单纯修改 _listeners 或阻止外层事件仍无法解决问题的根本原因。
+
+攻防策略：直接接管 iframe 内核
+
+解决思路非常直接：进入 iframe 内部，接管其事件流。核心做法包括：
+
+遍历页面所有 iframe，找到所有 UEditor 编辑器对应的内容框。
+注入捕获阶段事件监听，阻止 iframe 内部原有粘贴拦截逻辑。
+手动写入剪贴板内容，确保粘贴操作在 iframe 内部成功执行。
+持续扫描动态生成的 iframe，保证新加载题目也被保护。
+
+实现代码示例：
+```javascript
+function hookIframePaste() {
+    document.querySelectorAll('iframe').forEach(frame => {
+        try {
+            const doc = frame.contentDocument;
+            if (!doc || doc._mist_hooked) return;
+            doc._mist_hooked = true;
+
+            // 捕获 paste 事件
+            doc.addEventListener('paste', function(e) {
+                e.stopImmediatePropagation();
+
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+
+                try {
+                    doc.execCommand('insertText', false, text);
+                } catch(err) {
+                    // fallback
+                    const sel = doc.getSelection();
+                    if (sel && sel.rangeCount) {
+                        sel.deleteFromDocument();
+                        sel.getRangeAt(0).insertNode(doc.createTextNode(text));
+                    }
+                }
+            }, true);
+
+        } catch(err) {
+            // 跨域 iframe 自动忽略
+        }
+    });
+}
+```
+
+// 持续扫描 iframe（动态加载题目）
+setInterval(hookIframePaste, 1000);
+关键洞察
+
+这一层劫持，实际上才是粘贴链路的真正执行点。前四步：
+
+DOM 层面解锁复制/选中
+原型链劫持阻止 addListener
+捕获阶段阻断事件
+
+只能完成外围突破，而 iframe 内核级粘贴事件 才是最终的瓶颈。
+
+通过这一步：
+
+Ctrl+V 与右键粘贴完全生效
+动态生成题目、翻页后的编辑器也被保护
+剪贴板内容不会被清空
+
 ## 🚀 终极自动化实现（V6.3）
 
 结合上述所有原理，构建最终的自动化用户脚本。将以下代码放入 Tampermonkey 中即可实现全自动降维打击。
